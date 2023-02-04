@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { Container } from './App.styled';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
@@ -9,72 +9,59 @@ import ImageGallery from './ImageGallery';
 import Button from './Button';
 import Loader from './Loader';
 
-class App extends Component {
-  state = {
-    search: '',
-    items: [],
-    isLoading: false,
-    error: null,
-    bigImage: '',
-    page: 1,
-  };
+const App = () => {
+  const [page, setPage] = useState(1);
+  const [items, setItems] = useState([]);
+  const [searchName, setSearchName] = useState('');
+  const [totalHits, setTotalHits] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.searchName !== this.state.searchName ||
-      prevState.page !== this.state.page
-    ) {
-      this.setState({ isLoading: true });
-
-      axios({
-        url: `https://pixabay.com/api/?`,
-        params: {
-          q: this.state.searchName,
-          page: this.state.page,
-          key: '31947460-94dfdb2440a2031458268e436',
-          image_type: 'photo',
-          orientation: 'horizontal',
-          per_page: 12,
-        },
-      })
-        .then(response => {
-          return response.data.hits;
-        })
-        .then(data => {
-          if (data.length > 0) {
-            this.setState(prevState => ({
-              items: [...prevState.items, ...data],
-            }));
-            return;
-          }
-          toast('По Вашему запросу ничего не найдено', { autoClose: 3000 });
-        })
-        .catch(({ message }) => {
-          message = toast('Что-то пошло не так, попробуйте еще раз');
-          this.setState({
-            error: message,
-          });
-        })
-        .finally(() => {
-          this.setState({ isLoading: false });
-        });
+  useEffect(() => {
+    if (searchName === '') {
+      return;
     }
-  }
+    setIsLoading(true);
 
-  searchImage = searchName => {
-    this.setState({ searchName: searchName, page: 1, items: [] });
+    axios({
+      url: `https://pixabay.com/api/?`,
+      params: {
+        q: searchName,
+        page: page,
+        key: '31947460-94dfdb2440a2031458268e436',
+        image_type: 'photo',
+        orientation: 'horizontal',
+        per_page: 12,
+      },
+    })
+      .then(response => {
+        return response.data;
+      })
+      .then(({ hits, totalHits }) => {
+        if (hits.length > 0) {
+          setItems(prevItems => [...prevItems, ...hits]);
+          setTotalHits(totalHits);
+
+          return;
+        }
+        toast('За вашим запитом нічого не знайдено', { autoClose: 3000 });
+      })
+      .catch(({ message }) => {
+        message = toast('Щось пішло не так, спробуйте ще раз');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [searchName, page]);
+
+  const searchImage = searchName => {
+    setSearchName(searchName);
+    setPage(1);
+    setItems([]);
   };
 
-  handleClick = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+  const handleClick = () => {
+    setPage(page => page + 1);
   };
-
-
-  render() {
-    const { items, isLoading } = this.state;
-    const { searchImage, handleClick } = this;
 
     return (
       <Container>
@@ -95,6 +82,5 @@ class App extends Component {
       </Container>
     );
   }
-}
 
 export default App;
